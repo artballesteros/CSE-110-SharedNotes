@@ -8,18 +8,16 @@ import androidx.annotation.WorkerThread;
 
 import com.google.gson.Gson;
 
+import java.util.Map;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 
+import okhttp3.MediaType;
 import okhttp3.OkHttpClient;
 import okhttp3.Request;
+import okhttp3.RequestBody;
 
 public class NoteAPI {
-    // TODO: Implement the API using OkHttp!
-    // TODO: - getNote (maybe getNoteAsync)
-    // TODO: - putNote (don't need putNotAsync, probably)
-    // TODO: Read the docs: https://square.github.io/okhttp/
-    // TODO: Read the docs: https://sharednotes.goto.ucsd.edu/docs
 
     private volatile static NoteAPI instance = null;
 
@@ -72,5 +70,41 @@ public class NoteAPI {
 
         // We can use future.get(1, SECONDS) to wait for the result.
         return future;
+    }
+
+    public Note postNote(Note note) {
+        var json = note.toJSON();
+        String encodedMsg = note.title.replace(" ", "%20");
+        var req = new Request.Builder()
+                .url("https://sharednotes.goto.ucsd.edu/notes/" + encodedMsg)
+                .method("PUT", RequestBody.create(json, MediaType.parse("application/json")))
+                .build();
+        try (var res = client.newCall(req).execute()) {
+            var resJson = res.body().string();
+            return Note.fromJSON(resJson);
+        } catch (Exception e) {
+            e.printStackTrace();
+            return null;
+        }
+    }
+
+    public Note getNote(String title) {
+        String encodedMsg = title.replace(" ", "%20");
+        var req = new Request.Builder()
+                .url("https://sharednotes.goto.ucsd.edu/notes/" + encodedMsg    )
+                .method("GET", null)
+                .build();
+        try (var res = client.newCall(req).execute()) {
+            var resStr = res.body().string();
+            var gson = new Gson();
+            Map<String, ?> map = gson.fromJson(resStr, Map.class);
+            if (map.containsKey("detail")) {
+                return null;
+            }
+            return Note.fromJSON(resStr);
+        } catch (Exception e) {
+            e.printStackTrace();
+            return null;
+        }
     }
 }
