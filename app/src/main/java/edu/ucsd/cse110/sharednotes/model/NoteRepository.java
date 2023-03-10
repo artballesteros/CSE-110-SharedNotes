@@ -17,8 +17,11 @@ public class NoteRepository {
     private ScheduledFuture<?> poller; // what could this be for... hmm?
     private ScheduledExecutorService scheduler = Executors.newScheduledThreadPool(1);
 
+    private NoteAPI api;
+
     public NoteRepository(NoteDao dao) {
         this.dao = dao;
+        api = NoteAPI.provide();
     }
 
     // Synced Methods
@@ -96,7 +99,6 @@ public class NoteRepository {
         var data = new MutableLiveData<Note>();
         final String finalTitle = title;
         poller = scheduler.scheduleWithFixedDelay(() -> {
-            var api = NoteAPI.provide();
             var remoteNote = api.getNote(finalTitle);
             data.postValue(remoteNote);
         }, 0L, 3L, TimeUnit.SECONDS);
@@ -106,7 +108,7 @@ public class NoteRepository {
 
     public void upsertRemote(Note note) {
         scheduler.submit(() -> {
-            NoteAPI.provide().postNote(note);
+            api.postNote(note);
         });
     }
 }
